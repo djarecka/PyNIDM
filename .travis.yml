@@ -5,7 +5,7 @@ python:
   - 3.5
 
 install:
-  - pip install prov, rdflib, graphviz, pydotplus
+  - pip install prov rdflib graphviz pydotplus
 
 script:
   - py.test 
