@@ -3,6 +3,8 @@ import os,sys
 from nidm.experiment import Project,Session,Acquisition,AcquisitionObject,MRAcquisitionObject
 from nidm.core import Constants
 
+def test1():
+    assert True
 
 # dj TODO: adding more tests; I only put the Dave's pipeline to a function
 def main(argv):
