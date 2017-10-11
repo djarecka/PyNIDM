@@ -4,10 +4,13 @@ python:
   - 3.4
   - 3.5
 
+before_install:
+   - sudo apt-get install graphviz
+
+
 install:
 #  - pip install prov rdflib graphviz pydotplus pydot pytest
    - python setup.py install
-   - apt-get install graphviz
 
 script:
 #   - python nidm/experiment/tests/test_experiment.py
