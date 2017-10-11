@@ -10,4 +10,4 @@ install:
 
 script:
 #   - python nidm/experiment/tests/test_experiment.py
-  - py.test 
+  - py.test -v
