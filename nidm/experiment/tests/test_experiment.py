@@ -50,8 +50,8 @@ def main(argv):
     #save a DOT graph as PDF
     project.save_DotGraph("test.png",format="png")
 
-#if __name__ == "__main__":
-#   main(sys.argv[1:])
+if __name__ == "__main__":
+   main(sys.argv[1:])
 
 def test_main():
     main(sys.argv[1:])
