@@ -7,7 +7,7 @@ python:
 install:
 #  - pip install prov rdflib graphviz pydotplus pydot pytest
    - python setup.py install
-   - dnf install graphviz
+   - apt-get install graphviz
 
 script:
 #   - python nidm/experiment/tests/test_experiment.py
