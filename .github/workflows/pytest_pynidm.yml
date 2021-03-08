@@ -27,8 +27,8 @@ jobs:
 
     - name: Installing graphviz
       run: |
-        sudo apt-get update -q
-        sudo apt-get install graphviz -y
+        apt-get update -q
+        apt-get install graphviz -y
 
     - name: Update build tools
       run: python -m pip install --upgrade pip setuptools
