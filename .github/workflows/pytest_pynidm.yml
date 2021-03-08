@@ -26,7 +26,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Installing graphviz
-      run: sudo apt-get install graphviz -y
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install graphviz -y
 
     - name: Update build tools
       run: python -m pip install --upgrade pip setuptools
