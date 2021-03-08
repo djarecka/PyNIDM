@@ -10,7 +10,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         python-version: [3.7, 3.8]
       fail-fast: false
     runs-on: ${{ matrix.os }}
