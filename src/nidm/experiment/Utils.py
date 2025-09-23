@@ -1493,6 +1493,7 @@ def map_variables_to_terms(
     associate_concepts=True,
     dataset_identifier=None,
     cde_namespace=None,
+    skip_annotation=False,
 ):
     """
     :param df: data frame with first row containing variable names
@@ -1511,6 +1512,7 @@ def map_variables_to_terms(
             which is used in the NIDM records as a namespace to go along with a unique ID generated for the NIDM RDF graphs
     :param: cde_namespace: Dictionary where key is prefix and value is URL for namespace to use for data elements found
             in supplied dataframe and optional json_source data dictionary.
+    :param: skip_annotation: A flag that allows to skip annotation for elements that are not in the json_source
     :return:return dictionary mapping variable names (i.e. columns) to terms
     """
 
@@ -1571,7 +1573,6 @@ def map_variables_to_terms(
         nidm_owl_graph.parse(location=owl_file)
     else:
         nidm_owl_graph = None
-
     # iterate over columns
     for column in df.columns:
         # set up a dictionary entry for this column
@@ -1593,7 +1594,6 @@ def map_variables_to_terms(
                     .lstrip("'")
                     .rstrip("'")
                 ]
-
                 # 8/31/23 added to account for more than one json annotation entry for the same variable
                 if len(annotation_keys) > 1:
                     print(
@@ -2090,7 +2090,10 @@ def map_variables_to_terms(
             print("-" * 87)
             continue
         # if we haven't already found an annotation for this column then have user create one.
-        if current_tuple not in column_to_terms:
+        if current_tuple not in column_to_terms and skip_annotation:
+            column_to_terms[current_tuple] = {"label": search_term, 'source_variable': search_term}
+            continue
+        elif current_tuple not in column_to_terms:
             # create empty annotation structure for this source variable
             column_to_terms[current_tuple] = {}
             # enter user interaction function to get data dictionary annotations from user
@@ -3071,9 +3074,8 @@ def addGitAnnexSources(obj, bids_root, filepath=None):
             obj.add_attributes({Constants.PROV["Location"]: URIRef(source)})
 
         return len(sources)
-    except Exception:
-        # if "No annex found at" not in str(e):
-        #    print("Warning, error with AnnexRepo (Utils.py, addGitAnnexSources):", e)
+    except Exception as e:
+        print("Warning, error with AnnexRepo (Utils.py, addGitAnnexSources):", e)
         return 0
 
 

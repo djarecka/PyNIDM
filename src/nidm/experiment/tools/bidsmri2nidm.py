@@ -111,6 +111,14 @@ and API Keys.  Then set the environment variable INTERLEX_API_KEY with your key.
         default=False,
         help="Optional full path to user-suppled JSON file containing variable-term mappings.",
     )
+    parser.add_argument(
+        "-skip_annotation",
+        "--skip_annotation",
+        dest="skip_annotation",
+        action="store_true",
+        default=False,
+        help="If flag set to True, it will not annotate anything else than it is in the json_map file",
+    )
     # parser.add_argument('-nidm', dest='nidm_file', required=False, help="Optional full path of NIDM file to add BIDS data to. ")
     parser.add_argument(
         "-log",
@@ -148,7 +156,6 @@ and API Keys.  Then set the environment variable INTERLEX_API_KEY with your key.
     # sys.setdefaultencoding('utf8')
 
     project, cde, cde_pheno = bidsmri2project(directory, args)
-
     #  convert to rdflib Graph and add CDEs
     rdf_graph = Graph()
     rdf_graph.parse(source=StringIO(project.serializeTurtle()), format="turtle")
@@ -1084,6 +1091,7 @@ def bidsmri2project(directory, args):
                             bids=True,
                             associate_concepts=False,
                             dataset_identifier=dataset_doi,
+                            skip_annotation=args.skip_annotation,
                         )
                     # create data dictionary with concept mapping
                     else:
@@ -1094,6 +1102,7 @@ def bidsmri2project(directory, args):
                             output_file=os.path.join(directory, "participants.json"),
                             bids=True,
                             dataset_identifier=dataset_doi,
+                            skip_annotation=args.skip_annotation,
                         )
                 else:
                     # temporary data frame of variables we need to create data dictionaries for
@@ -1109,6 +1118,7 @@ def bidsmri2project(directory, args):
                             bids=True,
                             associate_concepts=False,
                             dataset_identifier=dataset_doi,
+                            skip_annotation=args.skip_annotation,
                         )
                     # create data dictionary with concept mapping
                     else:
@@ -1120,6 +1130,7 @@ def bidsmri2project(directory, args):
                             json_source=os.path.join(directory, "participants.json"),
                             bids=True,
                             dataset_identifier=dataset_doi,
+                            skip_annotation=args.skip_annotation,
                         )
             # if user supplied a JSON data dictionary then use it
             else:
@@ -1136,6 +1147,7 @@ def bidsmri2project(directory, args):
                         bids=True,
                         associate_concepts=False,
                         dataset_identifier=dataset_doi,
+                        skip_annotation=args.skip_annotation,
                     )
                 # create data dictionary with concept mapping
                 else:
@@ -1147,6 +1159,7 @@ def bidsmri2project(directory, args):
                         json_source=args.json_map,
                         bids=True,
                         dataset_identifier=dataset_doi,
+                        skip_annotation=args.skip_annotation,
                     )
 
             # iterate over rows in participants.tsv file and create NIDM objects for sessions and acquisitions
@@ -1402,6 +1415,7 @@ def bidsmri2project(directory, args):
                             output_file=os.path.splitext(tsv_file)[0] + ".json",
                             bids=True,
                             associate_concepts=False,
+                            skip_annotation=args.skip_annotation,
                         )
                     else:
                         column_to_terms_pheno, cde_tmp = map_variables_to_terms(
@@ -1410,6 +1424,7 @@ def bidsmri2project(directory, args):
                             df=temp,
                             output_file=os.path.splitext(tsv_file)[0] + ".json",
                             bids=True,
+                            skip_annotation=args.skip_annotation,
                         )
                 else:
                     # maps variables in CSV file to terms
@@ -1423,6 +1438,7 @@ def bidsmri2project(directory, args):
                             json_source=os.path.splitext(tsv_file)[0] + ".json",
                             bids=True,
                             associate_concepts=False,
+                            skip_annotation=args.skip_annotation,
                         )
                     else:
                         column_to_terms_pheno, cde_tmp = map_variables_to_terms(
@@ -1432,6 +1448,7 @@ def bidsmri2project(directory, args):
                             output_file=os.path.splitext(tsv_file)[0] + ".json",
                             json_source=os.path.splitext(tsv_file)[0] + ".json",
                             bids=True,
+                            skip_annotation=args.skip_annotation,
                         )
             # else user did supply a json data dictionary so use it
             else:
@@ -1446,6 +1463,7 @@ def bidsmri2project(directory, args):
                         json_source=args.json_map,
                         bids=True,
                         associate_concepts=False,
+                        skip_annotation=args.skip_annotation,
                     )
                 else:
                     column_to_terms_pheno, cde_tmp = map_variables_to_terms(
@@ -1455,6 +1473,7 @@ def bidsmri2project(directory, args):
                         output_file=os.path.splitext(tsv_file)[0] + ".json",
                         json_source=args.json_map,
                         bids=True,
+                        skip_annotation=args.skip_annotation,
                     )
 
             for row in pheno_data:
