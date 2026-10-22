@@ -619,18 +619,21 @@ def _software_scalar(software_metadata: pd.DataFrame, col: str) -> str:
 def _create_software_agent_for_derivative(
     project: Project, software_metadata: pd.DataFrame
 ) -> URIRef:
-    """Create a ``nidm:SoftwareAgent`` node carrying the supplied metadata
-    and return its URIRef.
+    """Create a software agent node carrying the supplied metadata and return
+    its URIRef.
 
-    Matches legacy intent (csv2nidm.py ~742-839): the agent is typed
-    ``nidm:SoftwareAgent`` (+ ``prov:Agent``) -- NOT ``prov:SoftwareAgent``
-    -- with ``dcmitype:title`` / ``dct:description`` / ``dct:hasVersion`` /
-    ``sio:URL``.  (cmdline/platform are emitted on the Derivative activity
-    by the caller, also matching legacy.)
+    The agent is typed ``nidm:SoftwareAgent`` + ``prov:SoftwareAgent`` +
+    ``prov:Agent`` (the ``prov:SoftwareAgent`` type is required: ``Query``'s
+    ``getSoftwareAgents`` -- which ``GetDerivativesDataForSubject`` relies on --
+    matches on ``prov:SoftwareAgent``; without it, derivatives written by
+    ``csv2nidm -derivative`` are invisible to that query).  Also carries
+    ``dcmitype:title`` / ``dct:description`` / ``dct:hasVersion`` / ``sio:URL``.
+    (cmdline/platform are emitted on the Derivative activity by the caller.)
     """
     agent = NIIRI[getUUID()]
     g = project.graph
     g.add((agent, RDF.type, NIDM["SoftwareAgent"]))
+    g.add((agent, RDF.type, PROV.SoftwareAgent))
     g.add((agent, RDF.type, PROV.Agent))
     g.add((agent, DCTYPES.title, Literal(_software_scalar(software_metadata, "title"))))
     g.add(

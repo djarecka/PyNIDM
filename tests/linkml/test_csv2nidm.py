@@ -643,9 +643,9 @@ def test_load_software_metadata_rejects_missing_columns(tmp_path: Path):
 
 
 def test_create_software_agent_carries_metadata(tmp_path: Path):
-    """The derivative software agent is typed nidm:SoftwareAgent (+
-    prov:Agent) and carries dcmitype:title / dct:description /
-    dct:hasVersion / sio:URL (legacy-intent predicates)."""
+    """The derivative software agent is typed nidm:SoftwareAgent +
+    prov:SoftwareAgent + prov:Agent and carries dcmitype:title /
+    dct:description / dct:hasVersion / sio:URL."""
     from rdflib import RDF
     from nidm.linkml.core.namespaces import DCT, DCTYPES, NIDM, PROV, SIO
     from nidm.linkml.experiment.project import Project as _Project
@@ -663,8 +663,11 @@ def test_create_software_agent_carries_metadata(tmp_path: Path):
     meta = _load_software_metadata(str(meta_path))
     agent = _create_software_agent_for_derivative(project, meta)
     g = project.graph
-    # nidm:SoftwareAgent (NOT prov:SoftwareAgent) + prov:Agent
+    # nidm:SoftwareAgent + prov:SoftwareAgent + prov:Agent.  The
+    # prov:SoftwareAgent type is required for Query.getSoftwareAgents /
+    # GetDerivativesDataForSubject to find the derivative (regression: #457).
     assert (agent, RDF.type, NIDM["SoftwareAgent"]) in g
+    assert (agent, RDF.type, PROV.SoftwareAgent) in g
     assert (agent, RDF.type, PROV.Agent) in g
     assert [str(n) for n in g.objects(agent, DCTYPES.title)] == ["FSL"]
     assert [str(v) for v in g.objects(agent, DCT.hasVersion)] == ["6.0.5"]
@@ -802,9 +805,21 @@ def test_csv2nidm_add_derivative_happy_path(tmp_path: Path, monkeypatch):
     # H5: the DerivativeObject is additionally typed nidm:DerivativeCollection.
     assert (dobjs[0], RDF.type, _NIDM["DerivativeCollection"]) in g
 
-    # H7: the software agent is nidm:SoftwareAgent (not prov:SoftwareAgent).
+    # The software agent is typed nidm:SoftwareAgent AND prov:SoftwareAgent.
+    # The prov:SoftwareAgent type is required so Query.getSoftwareAgents (used by
+    # GetDerivativesDataForSubject) can see it -- without it, csv2nidm -derivative
+    # derivatives are invisible to that query (regression: #457).
     soft_agents = list(g.subjects(RDF.type, _NIDM["SoftwareAgent"]))
     assert len(soft_agents) == 1
+    assert (soft_agents[0], RDF.type, PROV.SoftwareAgent) in g
+
+    # End-to-end: the subject-linked derivative is now discoverable (this
+    # returned [] before the prov:SoftwareAgent fix).
+    from nidm.linkml.experiment.query import getDerivativesNodesForSubject
+
+    persons = list(g.subjects(RDF.type, PROV.Person))
+    assert len(persons) == 1
+    assert dobjs[0] in getDerivativesNodesForSubject(g, persons[0])
 
 
 def test_csv2nidm_derivative_freshfile_builds_derivatives(tmp_path: Path):
