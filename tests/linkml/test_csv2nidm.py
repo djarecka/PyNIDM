@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import pytest
 from rdflib import Graph, Literal
-from rdflib.namespace import RDF
+from rdflib.namespace import RDF, XSD
 from nidm.linkml.core.constants import DD
 from nidm.linkml.core.namespaces import NIDM, ONLI, PROV, SIO
 from nidm.linkml.experiment.tools.csv2nidm import (
@@ -798,9 +798,9 @@ def test_csv2nidm_add_derivative_happy_path(tmp_path: Path, monkeypatch):
     dobjs = list(g.subjects(RDF.type, _NIDM["DerivativeObject"]))
     assert len(dobjs) == 1
     locations = list(g.objects(dobjs[0], PROV.Location))
-    assert any(str(loc) == "http://example.org/d" for loc in locations)
-    # ...as a URIRef (legacy uses a prov Identifier, not a literal).
-    assert all(isinstance(loc, URIRef) for loc in locations)
+    # ...as an xsd:anyURI literal, as legacy files carry it (the prov
+    # toolbox serializes its Identifier that way).
+    assert locations == [Literal("http://example.org/d", datatype=XSD.anyURI)]
 
     # H5: the DerivativeObject is additionally typed nidm:DerivativeCollection.
     assert (dobjs[0], RDF.type, _NIDM["DerivativeCollection"]) in g
@@ -826,7 +826,7 @@ def test_csv2nidm_derivative_freshfile_builds_derivatives(tmp_path: Path):
     """H4: -derivative without -nidm builds a fresh NIDM file of
     Derivatives (one Derivative + DerivativeObject + fresh Person +
     nidm:SoftwareAgent per row, no prov:used since there's no source)."""
-    from rdflib import Literal, URIRef
+    from rdflib import Literal
     from nidm.linkml.core.namespaces import NIDM as _NIDM
     from nidm.linkml.experiment.tools.csv2nidm import csv2nidm_derivative_project
 
@@ -880,9 +880,11 @@ def test_csv2nidm_derivative_freshfile_builds_derivatives(tmp_path: Path):
     # one fresh subject Person and one nidm:SoftwareAgent per row
     assert len(list(g.subjects(RDF.type, PROV.Person))) == 2
     assert len(list(g.subjects(RDF.type, _NIDM["SoftwareAgent"]))) == 2
-    # source_url lands as a prov:Location URIRef
+    # source_url lands as a prov:Location xsd:anyURI literal
     locs = [o for d in dobjs for o in g.objects(d, PROV.Location)]
-    assert locs and all(isinstance(loc, URIRef) for loc in locs)
+    assert locs and all(
+        isinstance(loc, Literal) and loc.datatype == XSD.anyURI for loc in locs
+    )
     # fresh-file derivatives have no source acquisition -> no prov:used
     assert not list(g.subject_objects(PROV.used))
 
@@ -985,3 +987,67 @@ def test_csv2nidm_main_derivative_with_no_match_short_circuits(
     assert rc == 0
     # File untouched.
     assert existing.stat().st_mtime == pytest.approx(pre_mtime, abs=0.5)
+
+
+def test_csv2nidm_derivative_location_round_trips_as_given(tmp_path: Path):
+    """source_url survives writing and re-reading exactly as given.
+
+    A URIRef holding a plain path is a relative IRI, which a Turtle reader
+    resolves against the document's location: "/data/x.json" came back as
+    "file:///data/x.json" and "rel/x.json" as an absolute path relative to
+    the document's location on the reading machine.  Legacy files carry the
+    value as an xsd:anyURI literal, so it is written that way.
+    """
+    from nidm.linkml.core import constants as _C
+
+    csv_path = _write_csv(
+        tmp_path,
+        "deriv.csv",
+        ["participant_id", "ses", "task", "run", "source_url", "fa"],
+        [
+            ["sub-01", "1", "", "", "/data/sub-01_dwi.json", 0.7],
+            ["sub-02", "1", "", "", "rel/sub-02_dwi.json", 0.6],
+        ],
+    )
+    json_map = _write_json_map(
+        tmp_path,
+        assessment=csv_path.name,
+        mapping={
+            "participant_id": {
+                "label": "participant_id",
+                "description": "Subject identifier",
+                "source_variable": "participant_id",
+                "isAbout": [{"@id": str(_C.NIDM_SUBJECTID), "label": "subject_id"}],
+            },
+            "fa": {
+                "label": "FA",
+                "description": "Fractional anisotropy",
+                "source_variable": "fa",
+                "isAbout": [{"@id": "http://example.org/fa", "label": "FA"}],
+            },
+        },
+    )
+    deriv = _write_software_metadata_csv(tmp_path)
+    out_path = tmp_path / "out.ttl"
+    rc = csv2nidm_main(
+        [
+            "-csv",
+            str(csv_path),
+            "-json_map",
+            str(json_map),
+            "-derivative",
+            str(deriv),
+            "-out",
+            str(out_path),
+            "-no_concepts",
+        ]
+    )
+    assert rc == 0
+
+    g = Graph()
+    g.parse(source=str(out_path), format="turtle")
+    locations = sorted(g.objects(None, PROV.Location), key=str)
+    assert locations == [
+        Literal("/data/sub-01_dwi.json", datatype=XSD.anyURI),
+        Literal("rel/sub-02_dwi.json", datatype=XSD.anyURI),
+    ]

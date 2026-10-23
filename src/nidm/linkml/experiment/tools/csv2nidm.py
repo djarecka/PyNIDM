@@ -742,11 +742,20 @@ def _materialize_derivative_row(
             obj=der_entity, cde=cde, row_variable=column, value=value
         )
 
-    # source_url -> prov:Location on the derivative entity, as a URIRef
-    # (legacy uses prov Identifier(...), i.e. a resource not a literal).
+    # source_url -> prov:Location on the derivative entity, as an xsd:anyURI
+    # literal holding the value exactly as given.  This is what legacy files
+    # contain: the prov toolbox serializes its Identifier as an xsd:anyURI
+    # literal.  A URIRef would be a relative IRI for a plain path, which a
+    # Turtle reader resolves against the document's own location, turning
+    # "/data/x.json" into "file:///data/x.json" and "rel/x.json" into an
+    # absolute path on whatever machine reads the file.
     if "source_url" in df_columns and not pd.isna(df_row["source_url"]):
         der_entity.graph.add(
-            (der_entity.identifier, PROV.Location, URIRef(str(df_row["source_url"])))
+            (
+                der_entity.identifier,
+                PROV.Location,
+                Literal(str(df_row["source_url"]), datatype=XSD.anyURI),
+            )
         )
 
     # cmdline / platform go on the Derivative ACTIVITY, keyed by the
@@ -1082,8 +1091,13 @@ def _materialize_derivative_row_freshfile(
         )
 
     if "source_url" in df_columns and not pd.isna(df_row["source_url"]):
+        # xsd:anyURI literal, as in the -nidm path above.
         der_entity.graph.add(
-            (der_entity.identifier, PROV.Location, URIRef(str(df_row["source_url"])))
+            (
+                der_entity.identifier,
+                PROV.Location,
+                Literal(str(df_row["source_url"]), datatype=XSD.anyURI),
+            )
         )
 
     # No BIDS experiment NIDM file was supplied (fresh-file derivative), so store

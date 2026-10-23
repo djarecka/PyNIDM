@@ -462,9 +462,10 @@ def _normalize_derivative_divergences(g: Graph) -> Graph:
          rdf:type so both sides agree (legacy bug; new is correct);
       2. new additionally types entities nidm:Derivative /
          nidm:DerivativeObject (more complete than legacy) -- drop those so
-         the type sets line up;
-      3. new stores source_url (prov:Location) as a URIRef while legacy uses
-         an xsd:anyURI literal -- collapse both to a plain literal of the URL.
+         the type sets line up.
+
+    source_url (prov:Location) is not folded: both sides store the same
+    xsd:anyURI literal, so a regression to a URIRef shows up as a difference.
     """
     out = Graph()
     for s, p, o in g:
@@ -472,8 +473,6 @@ def _normalize_derivative_divergences(g: Graph) -> Graph:
             p = _RDF_TYPE
         if p == _RDF_TYPE and o in _DERIV_NEW_ONLY_TYPES:
             continue
-        if p == _PROV_LOCATION:
-            o = Literal(str(o))
         out.add((s, p, o))
     return out
 
@@ -525,9 +524,9 @@ def mode_derivative(workdir: Path) -> bool:
         legacy_ok = False
 
     if legacy_ok:
-        # Compare modulo the three documented intentional divergences
+        # Compare modulo the two documented intentional divergences
         # (legacy rdfs:type bug; new's extra nidm:Derivative/DerivativeObject
-        # types; prov:Location URIRef-vs-anyURI-literal).
+        # types).  prov:Location is compared as written.
         return compare(legacy_ttl, new_ttl, pre=_normalize_derivative_divergences)
 
     print(
@@ -542,7 +541,8 @@ def _verify_new_derivative(new_ttl: Path) -> bool:
     """Check the NEW fresh-file -derivative output carries the H5/H6/H7
     structure: each DerivativeObject is typed nidm:DerivativeCollection, the
     software agent is a nidm:SoftwareAgent carrying the legacy dct/dcmitype
-    metadata predicates, and source_url lands as a prov:Location URIRef."""
+    metadata predicates, and source_url lands as a prov:Location xsd:anyURI
+    literal."""
     g = Graph()
     g.parse(source=str(new_ttl), format="turtle")
 
@@ -570,12 +570,14 @@ def _verify_new_derivative(new_ttl: Path) -> bool:
             f"{len(missing_coll)}/{len(dobjs)} DerivativeObject(s) miss "
             "nidm:DerivativeCollection (H5)"
         )
-    # M1: source_url is a prov:Location URIRef (not a Literal)
+    # M1: source_url is a prov:Location xsd:anyURI literal, as legacy writes it
     locs = [o for d in dobjs for o in g.objects(d, prov_loc)]
     if not locs:
         problems.append("no prov:Location on any DerivativeObject")
-    elif not all(isinstance(loc, URIRef) for loc in locs):
-        problems.append("prov:Location object is not a URIRef (M1)")
+    elif not all(
+        isinstance(loc, Literal) and loc.datatype == XSD.anyURI for loc in locs
+    ):
+        problems.append("prov:Location object is not an xsd:anyURI literal (M1)")
 
     # H7: software agent typed nidm:SoftwareAgent
     agents = list(g.subjects(rdf_type, URIRef(nidm + "SoftwareAgent")))
@@ -602,7 +604,7 @@ def _verify_new_derivative(new_ttl: Path) -> bool:
     print(
         f"    NEW -derivative OK ✓  {len(dobjs)} DerivativeObject(s) typed "
         "DerivativeCollection, nidm:SoftwareAgent carries dct/dcmitype/sio "
-        "metadata, source_url is a prov:Location URIRef"
+        "metadata, source_url is a prov:Location xsd:anyURI literal"
     )
     return True
 
