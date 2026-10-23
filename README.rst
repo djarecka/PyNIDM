@@ -755,6 +755,13 @@ environment variable (``anthropic`` | ``openai`` | ``llama``, case-insensitive);
 if it is unset the provider is auto-detected from whichever of the variables
 below is present.
 
+The cloud backends need their client libraries, installed via the ``queryai``
+extra:
+
+.. code:: bash
+
+   pip install "pynidm[queryai]"   # installs the anthropic + openai clients
+
 *Anthropic (Claude):*
 
 .. code:: bash

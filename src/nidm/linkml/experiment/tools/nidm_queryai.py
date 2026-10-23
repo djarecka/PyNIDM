@@ -890,7 +890,7 @@ def _query_anthropic(system_prompt, user_question, api_key):
     except ImportError:
         click.echo(
             "Error: anthropic package not installed. "
-            "Install with: pip install anthropic",
+            'Install the queryai backends with: pip install "pynidm[queryai]"',
             err=True,
         )
         sys.exit(1)
@@ -911,7 +911,8 @@ def _query_openai(system_prompt, user_question, api_key):
         import openai
     except ImportError:
         click.echo(
-            "Error: openai package not installed. " "Install with: pip install openai",
+            "Error: openai package not installed. "
+            'Install the queryai backends with: pip install "pynidm[queryai]"',
             err=True,
         )
         sys.exit(1)
