@@ -31,6 +31,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 import pandas as pd
 from rdflib import RDF, Graph, Literal, URIRef
+from rdflib.namespace import XSD
 from .derivative import Derivative
 from .derivative_object import DerivativeObject
 from .person import Person
@@ -120,12 +121,18 @@ def _emit_segmentation_derivative(
             obj=der_entity, cde=cde, row_variable=variable, value=value
         )
 
-    # source_url -> prov:Location on the derivative entity, as a URIRef
-    # (a resource, not a literal), matching csv2nidm.  No prov:used link is
+    # source_url -> prov:Location on the derivative entity, as an xsd:anyURI
+    # literal holding the value as given, matching csv2nidm and legacy files.
+    # A URIRef would make a plain path a relative IRI, which a Turtle reader
+    # resolves against the document's location.  No prov:used link is
     # invented in standalone mode -- there is no scan entity to point at.
     if source_url is not None:
         der_entity.graph.add(
-            (der_entity.identifier, PROV.Location, URIRef(str(source_url)))
+            (
+                der_entity.identifier,
+                PROV.Location,
+                Literal(str(source_url), datatype=XSD.anyURI),
+            )
         )
 
     # cmdline / platform on the Derivative ACTIVITY, keyed by the software

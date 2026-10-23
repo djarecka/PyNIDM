@@ -122,10 +122,15 @@ Severity key: **HIGH** = different/omitted triples (breaks isomorphism);
 
 ## MEDIUM
 
-- **M1. `source_url` `prov:Location` object type.** LEGACY emits it as a
-  URIRef/`Identifier` (≈701–707/1015–1018); NEW emits a plain `Literal`
-  (`_materialize_derivative_row`). Resource-vs-literal node → not
-  isomorphic.
+- **M1. `source_url` `prov:Location` object type. (Resolved: identical to
+  legacy.)** LEGACY builds it as a
+  prov `Identifier` (≈701–707/1015–1018), which the prov toolbox serializes
+  as an `xsd:anyURI` *literal* (legacy files read
+  `prov:Location "/path/x.json"^^xsd:anyURI`). NEW emits the same
+  `Literal(source_url, datatype=XSD.anyURI)`. A URIRef is not equivalent: a
+  plain path becomes a relative IRI that a Turtle reader resolves against
+  the document's location (`/data/x.json` -> `file:///data/x.json`,
+  `rel/x.json` -> an absolute path on the reading machine).
 - **M2. `prov:used` target.** LEGACY re-qualifies the source-activity
   local name into the `niiri:` namespace (≈718–726); NEW uses the raw
   `source_activity` URIRef. Diverges when the source isn't already a
@@ -254,7 +259,7 @@ The harness now has a `derivative` mode (fresh-file `-derivative -out`)
 and legacy **does** produce real output (no N1 crash), so it serves as a
 genuine byte-comparison reference. H4–H8 are all implemented in the new
 LinkML tool and unit-tested; the fresh-file path is now **ISOMORPHIC** to
-legacy after two code changes and three documented intentional divergences.
+legacy after three code changes and two documented intentional divergences.
 
 **Code changes (new tool, fresh-file path `csv2nidm_derivative_project`):**
 
@@ -268,6 +273,13 @@ legacy after two code changes and three documented intentional divergences.
   now creates a `prov:Collection` carrying the input CSV's `nfo:filename`;
   `_write_nidm_graph` wires the export activity's `prov:used` to it, matching
   legacy and the assessment-mode provenance shape.
+- **`prov:Location` node type (decision: match legacy).** `source_url` is
+  stored as an `xsd:anyURI` literal, as legacy does. This reverses the
+  earlier "keep URIRef" decision (formerly divergence 3): a plain path as a
+  URIRef is a relative IRI that a Turtle reader resolves against the
+  document's location, so `/data/x.json` read back as `file:///data/x.json`
+  and `rel/x.json` as an absolute path on the reading machine. The harness
+  compares `prov:Location` as written, so a regression shows up.
 
 **Documented intentional divergences (new is correct / more complete; the
 harness folds these via `_normalize_derivative_divergences`):**
@@ -278,10 +290,8 @@ harness folds these via `_normalize_derivative_divergences`):**
 2. **Entity/activity typing.** The new tool additionally types the entity
    `nidm:DerivativeObject` and the activity `nidm:Derivative`; legacy emits
    neither. (New is more complete.)
-3. **`prov:Location` node type.** Legacy stores `source_url` as an
-   `xsd:anyURI` literal; the new tool stores it as a `URIRef` (decision:
-   keep new — a real resource link).
+
 
 **Harness status:** all three modes green — `assessment` ISOMORPHIC,
 `nidm` NEW-intent verified (legacy data-drop bug), `derivative` ISOMORPHIC
-(modulo the three divergences above).
+(modulo the two divergences above).

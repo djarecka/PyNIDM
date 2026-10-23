@@ -21,7 +21,7 @@ These prove the FSL/FS/ANTs ingesters get a derivative model identical to
 from __future__ import annotations
 from pathlib import Path
 from rdflib import Graph, Literal, URIRef
-from rdflib.namespace import RDF, RDFS
+from rdflib.namespace import RDF, RDFS, XSD
 from nidm.linkml.core.namespaces import DCT, DCTYPES, NDAR, NIDM, PROV, SIO
 from nidm.linkml.experiment import Person, Project
 from nidm.linkml.experiment.derivatives import add_segmentation_derivative
@@ -139,9 +139,9 @@ def test_standalone_emits_correct_model(tmp_path: Path):
         assert obj is not None, f"missing measure {variable}"
         assert float(obj.toPython()) == float(value)
 
-    # source_url landed as a prov:Location URIRef (resource, not literal).
+    # source_url landed as a prov:Location xsd:anyURI literal, as given.
     loc = graph.value(subject=der_obj, predicate=PROV.Location)
-    assert isinstance(loc, URIRef)
+    assert isinstance(loc, Literal) and loc.datatype == XSD.anyURI
 
     # File was serialized.
     assert out.exists()
