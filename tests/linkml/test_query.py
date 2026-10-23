@@ -164,3 +164,27 @@ def test_get_brain_volumes(path_str: str) -> None:
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
     assert "volume" in df.columns
+
+
+@pytest.mark.parametrize(
+    "types, expected",
+    [
+        (["DerivativeCollection", "DerivativeObject"], "DerivativeCollection"),
+        (["DerivativeObject", "DerivativeCollection"], "DerivativeCollection"),
+        (["DerivativeObject"], "DerivativeObject"),
+        (["ANTSStatsCollection", "DerivativeCollection"], "ANTSStatsCollection"),
+        (["DerivativeObject", "ANTSStatsCollection"], "ANTSStatsCollection"),
+        (["AcquisitionObject", "StatsCollection"], "AcquisitionObject"),
+    ],
+)
+def test_stat_collection_type_does_not_depend_on_triple_order(types, expected):
+    """With several nidm: types, the most specific is reported whichever
+    type was added first."""
+    from rdflib import RDF, Namespace, URIRef
+
+    nidm = Namespace("http://purl.org/nidash/nidm#")
+    node = URIRef("http://iri.nidash.org/record")
+    g = Graph()
+    for t in types:
+        g.add((node, RDF.type, nidm[t]))
+    assert Q.getStatsCollectionForNode(g, node)["StatCollectionType"] == expected

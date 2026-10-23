@@ -1921,9 +1921,13 @@ def getDataTypeInfo(source_graph, datatype):
 def getStatsCollectionForNode(rdf_graph, derivatives_node):
     """Extract the stats-collection type and measured values for a node.
 
-    Walks every triple of *derivatives_node*: the nidm: rdf:type becomes the
+    Walks every triple of *derivatives_node*: its nidm: rdf:type becomes the
     StatCollectionType, and each remaining predicate that resolves to a known
     DataElement contributes a value entry (datumType, label, value, units).
+    When the node has several nidm: types, the most specific is reported: a
+    tool-specific type (e.g. ANTSStatsCollection) over DerivativeCollection,
+    and DerivativeCollection over DerivativeObject; ties between
+    tool-specific types break alphabetically.
 
     :param rdf_graph: parsed RDF graph containing the node
     :param derivatives_node: URI of the stats collection
@@ -1931,10 +1935,11 @@ def getStatsCollectionForNode(rdf_graph, derivatives_node):
     """
     isa = URIRef("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
     data = {"URI": derivatives_node, "values": {}}
+    nidm_types = []
 
     for _, datatype, value in rdf_graph.triples((derivatives_node, None, None)):
         if datatype == isa and str(value).find("http://purl.org/nidash/nidm#") == 0:
-            data["StatCollectionType"] = str(value)[28:]
+            nidm_types.append(str(value)[28:])
         else:
             dti = getDataTypeInfo(rdf_graph, datatype)
             if (
@@ -1947,6 +1952,20 @@ def getStatsCollectionForNode(rdf_graph, derivatives_node):
                     "units": str(dti["hasUnit"]),
                     "isAbout": str(dti["isAbout"]),
                 }
+
+    # A node can carry several nidm: types (csv2nidm and
+    # add_segmentation_derivative type every record both DerivativeCollection
+    # and DerivativeObject), so the result must not depend on triple order.
+    # Report the most specific type: a tool-specific one such as
+    # ANTSStatsCollection when present, else DerivativeCollection, else
+    # DerivativeObject; ties break alphabetically.
+    if nidm_types:
+        generic = ("DerivativeCollection", "DerivativeObject")
+        specific = sorted(t for t in nidm_types if t not in generic)
+        if specific:
+            data["StatCollectionType"] = specific[0]
+        else:
+            data["StatCollectionType"] = next(t for t in generic if t in nidm_types)
 
     return data
 
